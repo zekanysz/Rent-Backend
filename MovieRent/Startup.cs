@@ -20,6 +20,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.IdentityModel.Logging;
+using MovieRent.Service;
 
 namespace MovieRent
 {
@@ -35,6 +36,15 @@ namespace MovieRent
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            services.AddControllers();
+
+
+            services.Configure<MovieDBSettings>(
+                Configuration.GetSection(nameof(MovieDBSettings)));
+            services.AddSingleton<IMovieDBSettings>(sp =>
+                sp.GetRequiredService<IOptions<MovieDBSettings>>().Value);
+
+            services.AddScoped<MovieService>();
 
             services.AddIdentityMongoDbProvider<User>(identityOptions =>
             {
@@ -48,12 +58,6 @@ namespace MovieRent
             {
                 mongoIdentityOptions.ConnectionString = "mongodb://localhost/MovieRent";
             }).AddDefaultUI();
-
-            services.Configure<MovieDBSettings>(
-                Configuration.GetSection(nameof(MovieDBSettings)));
-            services.AddSingleton<IMovieDBSettings>(sp =>
-                sp.GetRequiredService<IOptions<MovieDBSettings>>().Value);
-
 
             var applicationSettingsConfiguration = Configuration.GetSection("ApplicationSettings");
             services.Configure<ApplicationSettings>(applicationSettingsConfiguration);
