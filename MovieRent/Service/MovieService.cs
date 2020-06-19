@@ -1,6 +1,7 @@
 ﻿using MongoDB.Driver;
 using MovieRent.Data;
 using MovieRent.Models;
+using MovieRent.Models.TmdbMovieResult;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,7 +12,7 @@ namespace MovieRent.Service
     public class MovieService
     {
 
-        private IMongoCollection<Movie> _movies;
+        private IMongoCollection<TmdbMovieResult> _movies;
 
         public MovieService(IMovieDBSettings settings)
         {
@@ -19,28 +20,28 @@ namespace MovieRent.Service
             var client = new MongoClient(settings.ConnectionString);
             var database = client.GetDatabase(settings.DatabaseName);
 
-            _movies = database.GetCollection<Movie>(settings.MoviesCollectionName);
+            _movies = database.GetCollection<TmdbMovieResult>(settings.MoviesCollectionName);
         }
 
-        public List<Movie> GetAll() =>
+        public List<TmdbMovieResult> GetAll() =>
            _movies.Find(Movie => true).ToList();
 
-        public Movie GetMovieByImdbId(string imdbId)
+        public TmdbMovieResult GetMovieByTmdbId(int tmdbId)
         {
-            return _movies.Find<Movie>(Movie => Movie.imdbID == imdbId).FirstOrDefault();
+            return _movies.Find<TmdbMovieResult>(Movie => Movie.id == tmdbId).FirstOrDefault();
         }
 
         public bool IsItExistsByTitle(string title)
         {
-            return _movies.Find<Movie>(Movie => Movie.Title == title).Any();
+            return _movies.Find<TmdbMovieResult>(Movie => Movie.original_title == title).Any();
         }
 
-        public bool IsItExistsByIMDBId(string imdbId)
+        public bool IsItExistsByTmdbId(int tmdbId)
         {
-            return _movies.Find<Movie>(Movie => Movie.imdbID == imdbId).Any();
+            return _movies.Find<TmdbMovieResult>(Movie => Movie.id == tmdbId).Any();
         }
 
-        public Movie Create(Movie movie)
+        public TmdbMovieResult Create(TmdbMovieResult movie)
         {
             _movies.InsertOne(movie);
             return movie;
