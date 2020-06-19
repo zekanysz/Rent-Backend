@@ -9,6 +9,7 @@ namespace MovieRent.Data
     {
         public string UsersCollectionName { get; set; }
         public string MoviesCollectionName { get; set; }
+        public string CreditsCollectionName { get; set; }
         public string RentsCollectionName { get; set; }
         public string ConnectionString { get; set; }
         public string DatabaseName { get; set; }
@@ -18,6 +19,7 @@ namespace MovieRent.Data
     {
         string UsersCollectionName { get; set; }
         string MoviesCollectionName { get; set; }
+        string CreditsCollectionName { get; set; }
         string RentsCollectionName { get; set; }
         string ConnectionString { get; set; }
         string DatabaseName { get; set; }

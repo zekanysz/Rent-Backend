@@ -45,6 +45,7 @@ namespace MovieRent
                 sp.GetRequiredService<IOptions<MovieDBSettings>>().Value);
 
             services.AddScoped<MovieService>();
+            services.AddScoped<CreditService>();
 
             services.AddIdentityMongoDbProvider<User>(identityOptions =>
             {

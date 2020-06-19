@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using MovieRent.Models;
 using MovieRent.Models.ImdbJSON;
+using MovieRent.Models.TmdbMovieCredits;
 using MovieRent.Models.TmdbMovieResult;
 using MovieRent.Service;
 using Newtonsoft.Json;
@@ -17,37 +18,16 @@ namespace MovieRent.Controllers
     public class MovieController : ApiController
     {
         private MovieService _movieService;
+        private CreditService _creditService;
 
-        public MovieController(MovieService movieService)
+
+        public MovieController(MovieService movieService, CreditService creditService)
         {
             _movieService = movieService;
+            _creditService = creditService;
         }
 
-
-        //[HttpGet("Search/{imdbId}")]
-        //public IActionResult ImdbMovieResult(string imdbId)
-        //{
-
-        //    string getImdbIdUrl = String.Format("https://api.themoviedb.org/3/find/" + imdbId + "?api_key=8d8ebd7ef7cb1361e624639ac8fea328&external_source=imdb_id");
-
-        //    WebRequest webRequestImdb = WebRequest.Create(getImdbIdUrl);
-        //    webRequestImdb.Method = "GET";
-        //    HttpWebResponse webResponseImdb = null;
-        //    webResponseImdb = (HttpWebResponse)webRequestImdb.GetResponse();
-        //    string resultImdb = null;
-        //    using (Stream streamImdb = webResponseImdb.GetResponseStream())
-        //    {
-        //        StreamReader streamReaderImdb = new StreamReader(streamImdb);
-        //        resultImdb = streamReaderImdb.ReadToEnd();
-        //        streamReaderImdb.Close();
-        //    }
-
-        //    ImdbMovieResult imdbMovieResult = JsonConvert.DeserializeObject<ImdbMovieResult>(resultImdb);
-
-        //    return Ok(imdbMovieResult);
-        //}
-
-        //[Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin")]
         [HttpPost("Add/{imdbId}")]
         public IActionResult MovieResult(string imdbId)
         {
@@ -84,65 +64,46 @@ namespace MovieRent.Controllers
 
             TmdbMovieResult tmdbMovieResult = JsonConvert.DeserializeObject<TmdbMovieResult>(resultTmdb);
 
-            bool isThereAny = _movieService.IsItExistsByTmdbId(tmdbMovieResult.id);
-            if (isThereAny)
+            bool isThereAnyMovie = _movieService.IsItExistsByTmdbId(tmdbMovieResult.id);
+            if (isThereAnyMovie)
             {
                 return Ok("This movie already exists in the DataBase");
             }
+            bool isCreditsCreated = _movieService.Create(tmdbMovieResult);
 
-            return Ok(_movieService.Create(tmdbMovieResult));
+
+            string getCreditsIdUrl = String.Format("https://api.themoviedb.org/3/movie/" + tmdbMovieResult.id + "/credits?api_key=8d8ebd7ef7cb1361e624639ac8fea328");
+
+            WebRequest webRequestCredits = WebRequest.Create(getCreditsIdUrl);
+            webRequestCredits.Method = "GET";
+            HttpWebResponse webResponseCredits = null;
+            webResponseCredits = (HttpWebResponse)webRequestCredits.GetResponse();
+            string resultCredits = null;
+            using (Stream streamCredits = webResponseCredits.GetResponseStream())
+            {
+                StreamReader streamReaderCredits = new StreamReader(streamCredits);
+                resultCredits = streamReaderCredits.ReadToEnd();
+                streamReaderCredits.Close();
+            }
+
+            MovieCredits movieCredits = JsonConvert.DeserializeObject<MovieCredits>(resultCredits);
+
+            bool isThereAnyCredits = _creditService.IsItExistsByTmdbId(movieCredits.id);
+            if (isThereAnyCredits)
+            {
+                return Ok("These credits already exists in the DataBase");
+            }
+
+            bool isMovieCreated = _creditService.Create(movieCredits);
+
+
+            if (!isMovieCreated && !isCreditsCreated)
+            {
+                return Ok("Error");
+            }
+
+            return Ok("Movie and Credites were inserted to the Database!");
         }
-
-
-
-
-
-        //[Authorize(Roles = "Admin")]
-        //[HttpPost("Add/{title}")]
-        //public IActionResult Post(string title)
-        //{
-        //    string url = String.Format("http://www.omdbapi.com/?apikey=f91c8c6f&t=" + title);
-
-        //    WebRequest webRequest = WebRequest.Create(url);
-        //    webRequest.Method = "GET";
-        //    HttpWebResponse webResponse = null;
-        //    webResponse = (HttpWebResponse)webRequest.GetResponse();
-        //    string result = null;
-        //    using (Stream stream = webResponse.GetResponseStream())
-        //    {
-        //        StreamReader streamReader = new StreamReader(stream);
-        //        result = streamReader.ReadToEnd();
-        //        streamReader.Close();
-        //    }
-
-        //    Movie movie = JsonConvert.DeserializeObject<Movie>(result);
-        //    string IMDBId = movie.imdbID;
-
-        //    bool isThereAny = _movieService.IsItExistsByIMDBId(IMDBId);
-        //    if (isThereAny)
-        //    {
-        //        return Ok("This movie already exists in the DataBase");
-        //    }
-
-        //    //string imgUrl = String.Format("http://img.omdbapi.com/?apikey=f91c8c6f&i=" + IMDBId);
-
-        //    //WebRequest imgWebRequest = WebRequest.Create(imgUrl);
-        //    //imgWebRequest.Method = "GET";
-        //    //HttpWebResponse imgWebResponse = null;
-        //    //imgWebResponse = (HttpWebResponse)imgWebRequest.GetResponse();
-        //    //var contentType = imgWebResponse.ContentType;
-        //    //var imgType = contentType.Split("/").Last(); 
-
-        //    //string filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "poster\\");
-
-        //    //using (var client = new WebClient())
-        //    //{
-        //    //    client.DownloadFile(imgUrl, filePath + IMDBId + "." + imgType);
-        //    //}
-
-        //    return Ok(_movieService.Create(movie));
-        //}
-
 
         [HttpGet("AllMovies")]
         public IActionResult GetMovies()
@@ -150,18 +111,11 @@ namespace MovieRent.Controllers
             return Ok(_movieService.GetAll());
         }
 
-        //[HttpGet("GetPoster")]
-        //public IActionResult GetPoster(string imdbId)
+        //[HttpPost("AddCredit/{tmdbId}")]
+        //public IActionResult AddCredit(string tmdbId)
         //{
-        //    string filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "poster\\", imdbId + ".jpeg");
-        //    var posterFileStrem = System.IO.File.OpenRead(filePath);
-        //    return File(posterFileStrem, "image/jpeg");
+           
         //}
 
-        //[HttpGet("GetMovieByImdbId/{imdbId}")]
-        //public IActionResult GetMovieById(string imdbId)
-        //{
-        //    return Ok(_movieService.GetMovieByImdbId(imdbId));
-        //}
     }
 }

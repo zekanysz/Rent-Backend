@@ -41,10 +41,10 @@ namespace MovieRent.Service
             return _movies.Find<TmdbMovieResult>(Movie => Movie.id == tmdbId).Any();
         }
 
-        public TmdbMovieResult Create(TmdbMovieResult movie)
+        public bool Create(TmdbMovieResult movie)
         {
             _movies.InsertOne(movie);
-            return movie;
+            return true;
         }
 
     }
