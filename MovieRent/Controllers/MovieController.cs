@@ -114,8 +114,13 @@ namespace MovieRent.Controllers
         //[HttpPost("AddCredit/{tmdbId}")]
         //public IActionResult AddCredit(string tmdbId)
         //{
-           
+
         //}
 
+        [HttpGet("AllCredits")]
+        public IActionResult GetCredits()
+        {
+            return Ok(_creditService.GetAll());
+        }
     }
 }

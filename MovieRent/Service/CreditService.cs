@@ -21,6 +21,9 @@ namespace MovieRent.Service
             _credits = database.GetCollection<MovieCredits>(settings.CreditsCollectionName);
         }
 
+        public List<MovieCredits> GetAll() =>
+            _credits.Find(Credits => true).ToList();
+
         public bool IsItExistsByTmdbId(int tmdbId)
         {
             return _credits.Find<MovieCredits>(Credit => Credit.id == tmdbId).Any();

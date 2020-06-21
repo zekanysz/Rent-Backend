@@ -23,7 +23,7 @@ namespace MovieRent.Models.TmdbMovieResult
         public List<ProductionCompanie> production_companies { get; set; }
         public List<ProductionCountry> production_countries { get; set; }
         public string release_date { get; set; }
-        public int revenue { get; set; }
+        public Int64 revenue { get; set; }
         public int runtime { get; set; }
         public List<SpokenLanguage> spoken_languages { get; set; }
         public string status { get; set; }
