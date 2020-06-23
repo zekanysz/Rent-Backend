@@ -46,6 +46,7 @@ namespace MovieRent
 
             services.AddScoped<MovieService>();
             services.AddScoped<CreditService>();
+            services.AddScoped<PersonImagesService>();
 
             services.AddIdentityMongoDbProvider<User>(identityOptions =>
             {

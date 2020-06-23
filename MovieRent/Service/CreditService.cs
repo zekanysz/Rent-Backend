@@ -29,6 +29,11 @@ namespace MovieRent.Service
             return _credits.Find<MovieCredits>(Credit => Credit.id == tmdbId).Any();
         }
 
+        public MovieCredits GetCreditsByMovieId(int movieId)
+        {
+            return _credits.Find<MovieCredits>(Credits => Credits.id == movieId).FirstOrDefault();
+        }
+
 
         public bool Create(MovieCredits credit)
         {
