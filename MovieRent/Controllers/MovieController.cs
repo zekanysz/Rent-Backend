@@ -20,139 +20,158 @@ namespace MovieRent.Controllers
     {
         private MovieService _movieService;
         private CreditService _creditService;
+        private PersonService _personService;
         private PersonImagesService _personImagesService;
 
 
-        public MovieController(MovieService movieService, CreditService creditService, PersonImagesService personImagesService)
+        public MovieController(MovieService movieService, CreditService creditService, PersonService personService, PersonImagesService personImagesService)
         {
             _movieService = movieService;
             _creditService = creditService;
             _personImagesService = personImagesService;
+            _personService = personService;
         }
 
         //[Authorize(Roles = "Admin")]
         [HttpPost("Add/{imdbId}")]
         public IActionResult MovieResult(string imdbId)
         {
-            string finalResponse = "";
-            string getImdbIdUrl = String.Format("https://api.themoviedb.org/3/find/" + imdbId +"?api_key=8d8ebd7ef7cb1361e624639ac8fea328&external_source=imdb_id");
+            WebRequest request;
+            HttpWebResponse response;
+            string result = null;
 
-            WebRequest webRequestImdb = WebRequest.Create(getImdbIdUrl);
-            webRequestImdb.Method = "GET";
-            HttpWebResponse webResponseImdb = null;
-            webResponseImdb = (HttpWebResponse)webRequestImdb.GetResponse();
-            string resultImdb = null;
-            using (Stream streamImdb = webResponseImdb.GetResponseStream())
+            string api = "api_key=8d8ebd7ef7cb1361e624639ac8fea328";
+            string finalResponse = "";
+            string getImdbIdUrl = String.Format("https://api.themoviedb.org/3/find/" + imdbId + "?" + api + "&external_source=imdb_id");
+
+            request = WebRequest.Create(getImdbIdUrl);
+            request.Method = "GET";
+            response = (HttpWebResponse)request.GetResponse();
+            using (Stream streamImdb = response.GetResponseStream())
             {
                 StreamReader streamReaderImdb = new StreamReader(streamImdb);
-                resultImdb = streamReaderImdb.ReadToEnd();
+                result = streamReaderImdb.ReadToEnd();
                 streamReaderImdb.Close();
             }
 
-            ImdbMovieResult imdbMovieResult = JsonConvert.DeserializeObject<ImdbMovieResult>(resultImdb);
+            ImdbMovieResult imdbMovieResult = JsonConvert.DeserializeObject<ImdbMovieResult>(result);
+            int tmdbId = imdbMovieResult.movie_results.FirstOrDefault().id;
 
-            string getTmdbIdUrl = String.Format("https://api.themoviedb.org/3/movie/" + imdbMovieResult.movie_results.FirstOrDefault().id + "?api_key=8d8ebd7ef7cb1361e624639ac8fea328&language=en-US");
+            bool isThereAnyMovie = _movieService.IsItExistsByTmdbId(tmdbId);
 
-            WebRequest webRequestTmdb = WebRequest.Create(getTmdbIdUrl);
-            webRequestTmdb.Method = "GET";
-            HttpWebResponse webResponseTmdb = null;
-            webResponseTmdb = (HttpWebResponse)webRequestTmdb.GetResponse();
-            string resultTmdb = null;
-            using (Stream streamTmdb = webResponseTmdb.GetResponseStream())
-            {
-                StreamReader streamReaderTmdb = new StreamReader(streamTmdb);
-                resultTmdb = streamReaderTmdb.ReadToEnd();
-                streamReaderTmdb.Close();
-            }
-
-            TmdbMovieResult tmdbMovieResult = JsonConvert.DeserializeObject<TmdbMovieResult>(resultTmdb);
-
-            bool isThereAnyMovie = _movieService.IsItExistsByTmdbId(tmdbMovieResult.id);
             if (isThereAnyMovie)
             {
-                finalResponse+= "\nThis movie already exists in the Database!";
+                finalResponse += "This movie already exists in the Database!";
             }
             else
             {
-                finalResponse += "\nMovie were inserted to the Database!";
+                string getTmdbIdUrl = String.Format("https://api.themoviedb.org/3/movie/" + tmdbId + "?" + api + "&language=en-US");
 
+                request = WebRequest.Create(getTmdbIdUrl);
+                response = (HttpWebResponse)request.GetResponse();
+                using (Stream streamTmdb = response.GetResponseStream())
+                {
+                    StreamReader streamReaderTmdb = new StreamReader(streamTmdb);
+                    result = streamReaderTmdb.ReadToEnd();
+                    streamReaderTmdb.Close();
+                }
+
+                TmdbMovieResult tmdbMovieResult = JsonConvert.DeserializeObject<TmdbMovieResult>(result);
+
+                bool isMovieCreated = _movieService.Create(tmdbMovieResult);
+
+                if (isMovieCreated)
+                    finalResponse += "Movie were inserted into the Database!";
+                else
+                    finalResponse += "Some error!";
             }
-            bool isCreditsCreated = _movieService.Create(tmdbMovieResult);
 
-            string getCreditsIdUrl = String.Format("https://api.themoviedb.org/3/movie/" + tmdbMovieResult.id + "/credits?api_key=8d8ebd7ef7cb1361e624639ac8fea328");
+            bool isThereAnyCredits = _creditService.IsItExistsByTmdbId(tmdbId);
 
-            WebRequest webRequestCredits = WebRequest.Create(getCreditsIdUrl);
-            webRequestCredits.Method = "GET";
-            HttpWebResponse webResponseCredits = null;
-            webResponseCredits = (HttpWebResponse)webRequestCredits.GetResponse();
-            string resultCredits = null;
-            using (Stream streamCredits = webResponseCredits.GetResponseStream())
-            {
-                StreamReader streamReaderCredits = new StreamReader(streamCredits);
-                resultCredits = streamReaderCredits.ReadToEnd();
-                streamReaderCredits.Close();
-            }
-
-            MovieCredits movieCredits = JsonConvert.DeserializeObject<MovieCredits>(resultCredits);
-
-            bool isThereAnyCredits = _creditService.IsItExistsByTmdbId(movieCredits.id);
             if (isThereAnyCredits)
             {
                 finalResponse += "\nThese credits already exists in the Database!";
             }
             else
             {
-                finalResponse += "\nCredites were inserted to the Database!";
+                string getCreditsIdUrl = String.Format("https://api.themoviedb.org/3/movie/" + tmdbId + "/credits?" + api);
 
-            }
-
-            bool isMovieCreated = _creditService.Create(movieCredits);
-
-
-            if (!isMovieCreated && !isCreditsCreated)
-            {
-                return Ok("Error");
-            }
-
-
-            int counter = 0;
-
-            foreach (var cast in movieCredits.cast)
-            {
-                bool isThereAnyPersonImegas = _personImagesService.IsItExistsByPersonId(cast.id);
-                if (isThereAnyPersonImegas)
+                request = WebRequest.Create(getCreditsIdUrl);
+                response = (HttpWebResponse)request.GetResponse();
+                using (Stream streamCredits = response.GetResponseStream())
                 {
-                    continue;
+                    StreamReader streamReaderCredits = new StreamReader(streamCredits);
+                    result = streamReaderCredits.ReadToEnd();
+                    streamReaderCredits.Close();
                 }
+
+                MovieCredits movieCredits = JsonConvert.DeserializeObject<MovieCredits>(result);
+
+                bool isCreditsCreated = _creditService.Create(movieCredits);
+
+                if (isCreditsCreated)
+                    finalResponse += "Credites were inserted into the Database!";
                 else
+                    finalResponse += "Some error!";
+
+                //int counter = 0;
+
+                //foreach (var cast in movieCredits.cast)
+                //{
+                //    bool isThereAnyPersonImegas = _personImagesService.IsItExistsByPersonId(cast.id);
+                //    if (isThereAnyPersonImegas)
+                //        continue;
+                //    else
+                //        counter++;
+
+                //    string getPersonImageIdUrl = String.Format("https://api.themoviedb.org/3/person/" + cast.id + "/images?" + api);
+
+                //    request = WebRequest.Create(getPersonImageIdUrl);
+                //    response = (HttpWebResponse)request.GetResponse();
+                //    using (Stream streamPersonImages = response.GetResponseStream())
+                //    {
+                //        StreamReader streamReaderPersonImages = new StreamReader(streamPersonImages);
+                //        result = streamReaderPersonImages.ReadToEnd();
+                //        streamReaderPersonImages.Close();
+                //    }
+
+                //    PersonImages personImages = JsonConvert.DeserializeObject<PersonImages>(result);
+                //    var orderedPersonImages = personImages.profiles.OrderByDescending(x => x.vote_average).ToList();
+                //    personImages.profiles = orderedPersonImages;
+                //    personImages.id = cast.id;
+
+                //    bool isPersonImagesCreated = _personImagesService.Create(personImages);
+                //}
+
+                int personDetailsCounter = 0;
+
+                foreach (var cast in movieCredits.cast)
                 {
-                    counter++;
+                    bool isThereAnyPersonDetails = _personService.IsItExistsByPersonId(cast.id);
+                    if (isThereAnyPersonDetails)
+                        continue;
+                    else
+                        personDetailsCounter++;
+
+                    string getPersonDetailsIdUrl = String.Format("https://api.themoviedb.org/3/person/" + cast.id + "?" + api + "&language=en-US");
+
+                    request = WebRequest.Create(getPersonDetailsIdUrl);
+                    response = (HttpWebResponse)request.GetResponse();
+                    using (Stream streamPersonDetails = response.GetResponseStream())
+                    {
+                        StreamReader streamReaderPersonDetails = new StreamReader(streamPersonDetails);
+                        result = streamReaderPersonDetails.ReadToEnd();
+                        streamReaderPersonDetails.Close();
+                    }
+
+                    PersonDetails personDetails = JsonConvert.DeserializeObject<PersonDetails>(result);
+
+                    bool isPersonImagesCreated = _personService.Create(personDetails);
                 }
 
-                string getPersonImageIdUrl = String.Format("https://api.themoviedb.org/3/person/"+ cast.id +"/images?api_key=8d8ebd7ef7cb1361e624639ac8fea328");
-
-                WebRequest webRequestPersonImages = WebRequest.Create(getPersonImageIdUrl);
-                webRequestPersonImages.Method = "GET";
-                HttpWebResponse webResponsePersonImages = null;
-                webResponsePersonImages = (HttpWebResponse)webRequestPersonImages.GetResponse();
-                string resultPersonImages = null;
-
-                using (Stream streamPersonImages = webResponsePersonImages.GetResponseStream())
-                {
-                    StreamReader streamReaderPersonImages = new StreamReader(streamPersonImages);
-                    resultPersonImages = streamReaderPersonImages.ReadToEnd();
-                    streamReaderPersonImages.Close();
-                }
-
-                PersonImages personImages = JsonConvert.DeserializeObject<PersonImages>(resultPersonImages);
-                var t = personImages.profiles.OrderByDescending(x => x.vote_average).ToList();
-                personImages.profiles = t;
-                personImages.id = cast.id;
-
-                bool isPersonImagesCreated = _personImagesService.Create(personImages);
+                finalResponse += "\n" + personDetailsCounter + " actor profiles were inserted into the Database!";
             }
 
-            finalResponse += "\n"+ counter + " actor profile images were inserted in the Database!";
 
             return Ok(JsonConvert.SerializeObject(finalResponse));
         }
@@ -187,6 +206,27 @@ namespace MovieRent.Controllers
             return Ok(personImagesLsit);
         }
 
+        [HttpGet("AllPersonDetailsByMovieId/{movieId}")]
+        public IActionResult GetPersonDetails(int movieId)
+        {
+            MovieCredits movieCredits = _creditService.GetCreditsByMovieId(movieId);
 
+            List<PersonDetails> personDetailsLsit = new List<PersonDetails>();
+
+            foreach (var cast in movieCredits.cast)
+            {
+                PersonDetails personDetails = _personService.GetPersonDetailsByPersonId(cast.id);
+                personDetailsLsit.Add(personDetails);
+            }
+
+            return Ok(personDetailsLsit);
+        }
+
+
+        [HttpGet("getPersonDetailsById/{personId}")]
+        public IActionResult GetPersonDetailsById(int personId)
+        {
+            return Ok(_personService.GetPersonDetailsByPersonId(personId));
+        }
     }
 }
