@@ -47,5 +47,11 @@ namespace MovieRent.Service
             return true;
         }
 
+        public bool DeleteMovieById(int tmdbId)
+        {
+            _movies.DeleteOne(Movie => Movie.id == tmdbId);
+            return true;
+        }
+
     }
 }

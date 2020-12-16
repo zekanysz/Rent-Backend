@@ -60,6 +60,7 @@ namespace MovieRent
             }, mongoIdentityOptions =>
             {
                 mongoIdentityOptions.ConnectionString = "mongodb://localhost/MovieRent";
+                //mongoIdentityOptions.ConnectionString = "mongodb://root:example@mongo:27017/MovieRent";
             }).AddDefaultUI();
 
             var applicationSettingsConfiguration = Configuration.GetSection("ApplicationSettings");

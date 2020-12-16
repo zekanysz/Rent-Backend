@@ -1,0 +1,16 @@
+version: '3.4'
+
+services:
+  movierent:
+    image: ${DOCKER_REGISTRY-}movierent
+    build:
+      context: .
+      dockerfile: MovieRent/Dockerfile
+  mongo:
+    image: mongo
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    ports: 
+    - "27017:27017"

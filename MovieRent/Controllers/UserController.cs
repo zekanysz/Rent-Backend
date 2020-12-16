@@ -25,21 +25,21 @@ namespace MovieRent.Controllers
 
 
 
-        [Authorize(Roles = "Admin")]
+        //[Authorize(Roles = "Admin")]
         [HttpPost("AddRole/{roleName}")]
         public async Task<IActionResult> CreatRoleAsync(string roleName)
         {
-            //var u = await _userManager.FindByNameAsync("admin@admin.com");
-            //await _userManager.AddClaimAsync(u, new Claim(ClaimTypes.Role, roleName));
-            //await _userManager.AddToRoleAsync(u, roleName);
+            var u = await _userManager.FindByNameAsync("admin@admin.com");
+            await _userManager.AddClaimAsync(u, new Claim(ClaimTypes.Role, roleName));
+            await _userManager.AddToRoleAsync(u, roleName);
             if (!await _roleManager.RoleExistsAsync(roleName))
             {
                 await _roleManager.CreateAsync(new MongoRole(roleName));
-                return Ok("ADMIN CREATED");
+                return Ok("ROLE CREATED");
             }
             else
             {
-                return Ok("ADMIN ALREADY EXISTS");
+                return Ok("ROLE ALREADY EXISTS");
             }
 
         }
@@ -50,11 +50,12 @@ namespace MovieRent.Controllers
         {
             var user = await _userManager.FindByNameAsync(userToRole.User);
 
-            if(!await _userManager.IsInRoleAsync(user, userToRole.Role))
+            if (!await _userManager.IsInRoleAsync(user, userToRole.Role))
             {
                 await _userManager.AddToRoleAsync(user, userToRole.Role);
                 return Ok("Role added to User");
-            }else
+            }
+            else
             {
                 return Ok("User has this role already");
 

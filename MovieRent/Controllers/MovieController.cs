@@ -223,10 +223,15 @@ namespace MovieRent.Controllers
         }
 
 
-        [HttpGet("getPersonDetailsById/{personId}")]
+        [HttpGet("GetPersonDetailsById/{personId}")]
         public IActionResult GetPersonDetailsById(int personId)
         {
             return Ok(_personService.GetPersonDetailsByPersonId(personId));
+        }
+
+        [HttpDelete("DeleteMovieById/{movieId}")]
+        public IActionResult DeleteMovieById(int movieId){
+            return Ok(_movieService.DeleteMovieById(movieId));
         }
     }
 }
